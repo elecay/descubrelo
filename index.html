@@ -38,6 +38,9 @@
   #result h2.ok { color:var(--ok); } #result h2.bad { color:var(--bad); }
   #answer { font-size:1.5rem; font-weight:700; margin:4px 0 10px; }
   #result a { color:var(--muted); font-size:.85rem; display:block; margin-bottom:14px; }
+  footer { margin-top:32px; text-align:center; color:var(--muted); font-size:.85rem; }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -70,6 +73,8 @@
     <a id="source" target="_blank" rel="noopener">View on Wikipedia</a>
     <button id="next">Next image →</button>
   </div>
+
+  <footer>Built with ❤️ by <s>Claude</s> <a href="https://github.com/elecay" target="_blank" rel="noopener">elecay</a></footer>
 </main>
 
 <script>
