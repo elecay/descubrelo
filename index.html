@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Descúbrelo</title>
+<title>Descubrelo</title>
 <style>
   :root { --bg:#14161c; --card:#1e222b; --line:#323846; --text:#eef0f4; --muted:#98a0b0; --accent:#ffb84d; --ok:#5fd08a; --bad:#f0706a; }
   * { box-sizing: border-box; }
@@ -43,122 +43,111 @@
 <body>
 <main>
   <header>
-    <h1>🔍 Descúbrelo</h1>
-    <span id="score">Aciertos: 0 / 0</span>
+    <h1>🔍 Descubrelo</h1>
+    <span id="score">Score: 0 / 0</span>
   </header>
 
   <div id="hint">
-    <span id="category">Pista: <b>…</b></span>
-    <span id="dots" aria-label="Intentos"></span>
+    <span id="category">Hint: <b>…</b></span>
+    <span id="dots" aria-label="Attempts"></span>
   </div>
 
   <div id="frame">
-    <img id="img" alt="Imagen misteriosa">
-    <div id="status">Cargando imagen…</div>
+    <img id="img" alt="Mystery image">
+    <div id="status">Loading image…</div>
   </div>
 
   <form id="form" autocomplete="off">
-    <input id="guess" placeholder="¿Qué es?" aria-label="Tu respuesta" autocapitalize="off" spellcheck="false">
-    <button id="send">Probar</button>
-    <button id="pass" type="button" class="ghost" title="Gastar un intento para alejar el zoom">Paso</button>
+    <input id="guess" placeholder="What is it?" aria-label="Your guess" autocapitalize="off" spellcheck="false">
+    <button id="send">Guess</button>
+    <button id="pass" type="button" class="ghost" title="Use up an attempt to zoom out">Pass</button>
   </form>
   <ul id="guesses"></ul>
 
   <div id="result" hidden>
     <h2 id="verdict"></h2>
     <div id="answer"></div>
-    <a id="source" target="_blank" rel="noopener">Ver en Wikipedia</a>
-    <button id="next">Siguiente imagen →</button>
+    <a id="source" target="_blank" rel="noopener">View on Wikipedia</a>
+    <button id="next">Next image →</button>
   </div>
 </main>
 
 <script>
-// Cada entrada: "Título en Wikipedia" o "Título en Wikipedia:respuesta,alias,alias".
-// La primera respuesta es la que se muestra al final. Las imágenes se piden a Wikipedia en cada partida.
+// Each entry: "Wikipedia title" or "Wikipedia title:answer,alias,alias".
+// The first answer is the one shown at the end. Images are fetched from Wikipedia on every round.
 const ITEMS = {
   "Animal": [
-    "Giraffa camelopardalis:jirafa", "Panthera leo:león", "Panthera tigris:tigre", "Elephantidae:elefante",
-    "Ailuropoda melanoleuca:oso panda,panda", "Spheniscidae:pingüino", "Equus quagga:cebra",
-    "Phascolarctos cinereus:koala", "Delphinidae:delfín", "Ursus maritimus:oso polar,oso",
-    "Phoenicopterus:flamenco", "Macropus:canguro", "Hippopotamus amphibius:hipopótamo", "Camelus:camello,dromedario",
-    "Pavo cristatus:pavo real", "Crocodylidae:cocodrilo,caimán", "Gorilla:gorila", "Canis lupus:lobo",
-    "Vulpes vulpes:zorro", "Octopoda:pulpo", "Testudines:tortuga", "Strigiformes:búho,lechuza",
-    "Lepidoptera:mariposa,polilla", "Apis mellifera:abeja", "Chamaeleonidae:camaleón",
-    "Rhinocerotidae:rinoceronte", "Sciurus vulgaris:ardilla", "Erinaceinae:erizo",
-    "Ara macao:guacamayo,loro,papagayo", "Acinonyx jubatus:guepardo,chita", "Ramphastos toco:tucán",
-    "Medusozoa:medusa", "Selachimorpha:tiburón", "Lama glama:llama", "Bradypus:perezoso"
+    "Giraffe", "Lion", "Tiger", "Elephant", "Giant panda:panda,giant panda,panda bear", "Penguin", "Zebra", "Koala",
+    "Dolphin", "Polar bear:polar bear,bear", "Flamingo", "Kangaroo", "Hippopotamus:hippopotamus,hippo",
+    "Camel:camel,dromedary", "Peafowl:peacock,peafowl", "Crocodile:crocodile,alligator,croc", "Gorilla", "Wolf",
+    "Red fox:fox,red fox", "Octopus", "Turtle:turtle,tortoise", "Owl", "Butterfly:butterfly,moth",
+    "Honey bee:bee,honey bee,honeybee", "Chameleon", "Rhinoceros:rhinoceros,rhino", "Red squirrel:squirrel,red squirrel",
+    "Hedgehog", "Scarlet macaw:parrot,macaw,scarlet macaw", "Cheetah", "Toucan", "Jellyfish", "Shark", "Llama:llama,alpaca",
+    "Sloth", "Seahorse:seahorse,sea horse", "Lobster", "Common ostrich:ostrich", "Raccoon:raccoon,racoon", "Meerkat"
   ],
-  "Edificio o monumento": [
-    "Torre Eiffel", "Coliseo:coliseo,coliseo romano,coliseo de roma", "Taj Mahal", "Estatua de la Libertad",
-    "Sagrada Familia", "Big Ben", "Torre de Pisa:torre de pisa,pisa", "Ópera de Sídney:ópera de sídney,opera de sydney",
-    "Machu Picchu", "Partenón:partenón,acrópolis", "Gran Muralla China:gran muralla china,muralla china,gran muralla",
-    "Cristo Redentor:cristo redentor,cristo de corcovado,corcovado", "Burj Khalifa",
-    "Empire State Building:empire state building,empire state", "Puente Golden Gate:golden gate,puente golden gate",
-    "Alhambra", "Petra", "Stonehenge", "Chichén Itzá", "Angkor Wat",
-    "Catedral de San Basilio:catedral de san basilio,san basilio",
-    "Castillo de Neuschwanstein:castillo de neuschwanstein,neuschwanstein", "Torres Petronas:torres petronas,petronas",
-    "Puerta de Brandeburgo", "Acueducto de Segovia", "Mezquita-catedral de Córdoba:mezquita de córdoba,mezquita",
-    "Casa Blanca", "Kremlin de Moscú:kremlin,kremlin de moscú",
-    "Necrópolis de Guiza:pirámides de guiza,pirámides,pirámide,pirámides de giza,pirámides de egipto",
-    "Gran Esfinge de Guiza:esfinge,gran esfinge,esfinge de guiza,esfinge de giza",
-    "Puente de la Torre:tower bridge,puente de la torre,puente de londres", "Atomium",
-    "Museo Guggenheim Bilbao:museo guggenheim,guggenheim,guggenheim bilbao", "Moái:moái,moais,isla de pascua",
-    "Monte Rushmore:monte rushmore,rushmore", "Arco de Triunfo de París:arco de triunfo,arco del triunfo",
-    "Basílica de San Pedro:basílica de san pedro,san pedro,vaticano", "Santa Sofía:santa sofía,hagia sophia",
-    "Palacio de Versalles:palacio de versalles,versalles", "London Eye:london eye,noria,noria de londres"
+  "Building or monument": [
+    "Eiffel Tower", "Colosseum:colosseum,coliseum,roman colosseum", "Taj Mahal", "Statue of Liberty",
+    "Sagrada Família", "Big Ben:big ben,elizabeth tower", "Leaning Tower of Pisa:leaning tower of pisa,tower of pisa,pisa",
+    "Sydney Opera House:sydney opera house,sydney opera,opera house", "Machu Picchu", "Parthenon:parthenon,acropolis",
+    "Great Wall of China:great wall of china,great wall,wall of china",
+    "Christ the Redeemer (statue):christ the redeemer,cristo redentor,corcovado", "Burj Khalifa",
+    "Empire State Building:empire state building,empire state", "Golden Gate Bridge:golden gate bridge,golden gate",
+    "Alhambra", "Petra", "Stonehenge", "Chichen Itza", "Angkor Wat",
+    "Saint Basil's Cathedral:saint basil's cathedral,st basil's cathedral,saint basil,st basil",
+    "Neuschwanstein Castle:neuschwanstein castle,neuschwanstein", "Petronas Towers:petronas towers,petronas",
+    "Brandenburg Gate", "White House", "Moscow Kremlin:kremlin,moscow kremlin",
+    "Giza pyramid complex:pyramids of giza,pyramids,pyramid,giza pyramids,egyptian pyramids,great pyramid",
+    "Great Sphinx of Giza:sphinx,great sphinx,sphinx of giza", "Tower Bridge:tower bridge,london bridge", "Atomium",
+    "Guggenheim Museum Bilbao:guggenheim museum,guggenheim,guggenheim bilbao", "Moai:moai,easter island,easter island statues",
+    "Mount Rushmore:mount rushmore,rushmore,mt rushmore", "Arc de Triomphe:arc de triomphe,arch of triumph,triumphal arch",
+    "St. Peter's Basilica:st peter's basilica,saint peter's basilica,st peters,vatican", "Hagia Sophia",
+    "Palace of Versailles:palace of versailles,versailles", "London Eye:london eye,ferris wheel",
+    "Notre-Dame de Paris:notre dame,notre dame de paris,notre dame cathedral", "Space Needle", "CN Tower", "Brooklyn Bridge"
   ],
-  "Paisaje o fenómeno natural": [
-    "Gran Cañón:gran cañón,gran cañón del colorado,cañón del colorado", "Monte Everest:everest,monte everest",
-    "Cataratas del Iguazú:cataratas del iguazú,iguazú,cataratas", "Cataratas del Niágara:cataratas del niágara,niágara,cataratas",
-    "Monte Fuji:monte fuji,fuji,fujiyama", "Cervino:cervino,matterhorn", "Salar de Uyuni:salar de uyuni,uyuni,salar",
-    "Uluru:uluru,ayers rock", "Bahía de Ha-Long:bahía de ha long,ha long,halong",
-    "Glaciar Perito Moreno:glaciar perito moreno,perito moreno,glaciar", "Kilimanjaro", "Torres del Paine",
-    "Salto Ángel", "Mar Muerto", "Aurora polar:aurora boreal,aurora,aurora polar,aurora austral",
-    "Gran Barrera de Coral:gran barrera de coral,barrera de coral,arrecife", "Teide",
-    "Calzada del Gigante:calzada del gigante,calzada de los gigantes", "Cañón del Antílope", "Capadocia",
-    "Monument Valley", "Parque nacional de Yosemite:yosemite",
-    "Volcán", "Glaciar", "Iceberg", "Duna:duna,dunas,desierto", "Géiser", "Arcoíris:arcoíris,arco iris",
-    "Cascada:cascada,catarata,salto de agua", "Fiordo", "Tornado", "Rayo:rayo,relámpago,tormenta"
+  "Landscape or natural phenomenon": [
+    "Grand Canyon", "Mount Everest:mount everest,everest,mt everest", "Iguazu Falls:iguazu falls,iguazu,iguassu falls,waterfall",
+    "Niagara Falls:niagara falls,niagara,waterfall", "Mount Fuji:mount fuji,fuji,mt fuji,fujiyama", "Matterhorn",
+    "Salar de Uyuni:salar de uyuni,uyuni,salt flat,salt flats", "Uluru:uluru,ayers rock", "Hạ Long Bay:ha long bay,halong bay,ha long",
+    "Perito Moreno Glacier:perito moreno glacier,perito moreno,glacier", "Mount Kilimanjaro:kilimanjaro,mount kilimanjaro",
+    "Angel Falls:angel falls,salto angel,waterfall", "Dead Sea", "Aurora:aurora,northern lights,aurora borealis,southern lights",
+    "Great Barrier Reef:great barrier reef,barrier reef,coral reef,reef", "Giant's Causeway:giant's causeway,giants causeway",
+    "Antelope Canyon", "Cappadocia", "Monument Valley", "Yosemite National Park:yosemite,yosemite national park",
+    "Volcano", "Glacier", "Iceberg", "Dune:dune,dunes,sand dune,desert", "Geyser", "Rainbow", "Waterfall", "Fjord:fjord,fiord",
+    "Tornado:tornado,twister", "Lightning:lightning,thunderstorm,thunder", "Cliffs of Moher:cliffs of moher,cliffs,cliff"
   ],
-  "Comida": [
-    "Pizza", "Paella", "Sushi", "Hamburguesa", "Cruasán:cruasán,croissant,medialuna", "Taco",
-    "Tortilla de patatas:tortilla de patatas,tortilla,tortilla española,tortilla de papas", "Churro:churros,churro",
-    "Helado", "Espagueti:espaguetis,spaghetti,pasta", "Lasaña", "Ceviche:ceviche,cebiche", "Empanada", "Guacamole",
-    "Gofre:gofre,waffle,wafle", "Pretzel:pretzel,bretzel", "Dónut:dónut,dona,rosquilla,donuts", "Macaron:macaron,macarrón",
-    "Ramen", "Perrito caliente:perrito caliente,hot dog,pancho,perro caliente",
-    "Palomitas de maíz:palomitas,palomitas de maíz,pochoclo,canguil,popcorn,cotufas", "Queso", "Chocolate", "Pan",
-    "Tiramisú", "Falafel", "Arepa", "Tamal", "Burrito", "Nachos", "Panqueque:panqueque,tortita,pancake,crepe,hotcake",
-    "Huevo frito", "Croqueta", "Gazpacho", "Fondue", "Kebab"
+  "Food": [
+    "Pizza", "Paella", "Sushi", "Hamburger:hamburger,burger,cheeseburger", "Croissant", "Taco:taco,tacos",
+    "Spanish omelette:spanish omelette,tortilla,omelette,omelet,spanish tortilla", "Churro:churros,churro", "Ice cream:ice cream,gelato",
+    "Spaghetti:spaghetti,pasta", "Lasagna:lasagna,lasagne", "Ceviche", "Empanada", "Guacamole", "Waffle", "Pretzel",
+    "Doughnut:doughnut,donut", "Macaron:macaron,macaroon", "Ramen", "Hot dog:hot dog,hotdog", "Popcorn", "Cheese",
+    "Chocolate", "Bread", "Tiramisu", "Falafel", "Arepa", "Tamale:tamale,tamal", "Burrito", "Nachos", "Pancake:pancake,pancakes,crepe",
+    "Fried egg:fried egg,egg", "Croquette", "Gazpacho", "Fondue", "Kebab:kebab,kabob,doner", "Bagel",
+    "French fries:french fries,fries,chips", "Cupcake", "Dumpling:dumpling,dumplings"
   ],
-  "Fruta o planta": [
-    "Ananas comosus:piña,ananá,ananás", "Fragaria:fresa,frutilla", "Sandía", "Actinidia deliciosa:kiwi",
-    "Punica granatum:granada", "Helianthus annuus:girasol", "Cactaceae:cactus,cacto", "Persea americana:aguacate,palta",
-    "Banana:plátano,banana,banano", "Limón", "Cocos nucifera:coco,cocotero,palmera", "Tulipa:tulipán",
-    "Lavandula:lavanda", "Pitahaya:pitahaya,pitaya,fruta del dragón", "Cynara scolymus:alcachofa,alcaucil",
-    "Zea mays:maíz,choclo,mazorca,elote", "Mangifera indica:mango", "Uva:uva,uvas", "Cereza:cereza,cerezas",
-    "Frambuesa", "Higo", "Carica papaya:papaya", "Calabaza:calabaza,zapallo", "Brócoli",
-    "Amanita muscaria:seta,hongo,amanita", "Bambusoideae:bambú", "Orchidaceae:orquídea",
-    "Taraxacum officinale:diente de león", "Bonsái", "Solanum lycopersicum:tomate,jitomate", "Allium sativum:ajo",
-    "Prunus persica:melocotón,durazno", "Arándano:arándano,arándanos"
+  "Fruit or plant": [
+    "Pineapple", "Strawberry", "Watermelon", "Kiwifruit:kiwi,kiwifruit", "Pomegranate", "Common sunflower:sunflower", "Cactus",
+    "Avocado", "Banana", "Lemon", "Coconut:coconut,coconut palm,palm tree", "Tulip", "Lavandula:lavender",
+    "Pitaya:dragon fruit,pitaya,pitahaya", "Artichoke", "Maize:corn,maize,sweetcorn,corn on the cob", "Mango", "Grape:grapes,grape",
+    "Cherry:cherry,cherries", "Raspberry", "Fig", "Papaya", "Pumpkin:pumpkin,squash", "Broccoli",
+    "Amanita muscaria:mushroom,toadstool,fly agaric,amanita", "Bamboo", "Orchid", "Taraxacum:dandelion", "Bonsai", "Tomato",
+    "Garlic", "Peach", "Blueberry:blueberry,blueberries"
   ],
-  "Objeto": [
-    "Paraguas:paraguas,sombrilla", "Bicicleta:bicicleta,bici", "Guitarra", "Piano", "Violín", "Saxofón:saxofón,saxo",
-    "Batería (instrumento musical):batería,tambores,tambor", "Trompeta", "Acordeón", "Arpa", "Reloj de arena",
-    "Brújula", "Telescopio", "Microscopio", "Globo aerostático:globo aerostático,globo",
-    "Cubo de Rubik:cubo de rubik,rubik,cubo mágico", "Máquina de escribir", "Ajedrez:ajedrez,tablero de ajedrez",
-    "Lámpara incandescente:bombilla,foco,lámpara,bombillo,ampolleta", "Tijera:tijeras,tijera", "Candado", "Ancla",
-    "Linterna", "Cámara fotográfica:cámara,cámara de fotos,cámara fotográfica", "Gramófono:gramófono,tocadiscos,fonógrafo",
-    "Helicóptero", "Submarino", "Tranvía", "Locomotora de vapor:locomotora,tren,locomotora de vapor", "Velero:velero,barco",
-    "Motocicleta:moto,motocicleta", "Monopatín:monopatín,skate,patineta,skateboard", "Dado:dado,dados", "Yoyó:yoyó,yo-yo",
-    "Cometa (juguete):cometa,barrilete,papalote,volantín", "Abanico", "Bumerán:bumerán,boomerang",
-    "Muñeca rusa:matrioska,muñeca rusa,matrioshka,mamushka", "Faro", "Molino de viento:molino de viento,molino",
-    "Tetera", "Sacacorchos:sacacorchos,descorchador", "Globo terráqueo:globo terráqueo,globo,bola del mundo,mapamundi"
+  "Object": [
+    "Umbrella:umbrella,parasol", "Bicycle:bicycle,bike", "Guitar", "Piano", "Violin", "Saxophone:saxophone,sax",
+    "Drum kit:drums,drum kit,drum set,drum", "Trumpet", "Accordion", "Harp", "Hourglass", "Compass", "Telescope", "Microscope",
+    "Hot air balloon:hot air balloon,balloon", "Rubik's Cube:rubik's cube,rubik,rubiks cube", "Typewriter",
+    "Chess:chess,chessboard,chess board", "Incandescent light bulb:light bulb,lightbulb,bulb,lamp", "Scissors", "Padlock:padlock,lock",
+    "Anchor", "Flashlight:flashlight,torch", "Camera", "Phonograph:gramophone,phonograph,record player", "Helicopter", "Submarine",
+    "Tram:tram,streetcar,trolley", "Steam locomotive:steam locomotive,locomotive,train,steam train", "Sailboat:sailboat,boat,sailing boat,yacht",
+    "Motorcycle:motorcycle,motorbike", "Skateboard", "Dice:dice,die", "Yo-yo:yo-yo,yoyo", "Kite", "Hand fan:fan,hand fan",
+    "Boomerang", "Matryoshka doll:matryoshka,russian doll,nesting doll,matryoshka doll,babushka", "Lighthouse", "Windmill",
+    "Teapot:teapot,kettle", "Corkscrew", "Globe"
   ]
 };
 
-const ZOOMS = [10, 6, 3.5, 2, 1];   // un nivel por intento; el quinto muestra la imagen completa
+const ZOOMS = [10, 6, 3.5, 2, 1];   // one level per attempt; the fifth shows the full image
 const MAX = ZOOMS.length;
-const API = "https://es.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
+const API = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
             "&prop=pageimages&piprop=thumbnail&pithumbsize=960&titles=";
 
 const $ = id => document.getElementById(id);
@@ -179,11 +168,11 @@ function buildDeck() {
   return all;
 }
 
-// --- Comparación tolerante -------------------------------------------------
+// --- Forgiving comparison ---------------------------------------------------
 function norm(s) {
   return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, " ").trim()
-    .split(" ").filter(w => !["el", "la", "los", "las", "un", "una", "unos", "unas"].includes(w)).join(" ");
+    .replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim()
+    .split(" ").filter(w => !["the", "a", "an"].includes(w)).join(" ");
 }
 function lev(a, b) {
   let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
@@ -204,18 +193,18 @@ function isMatch(guess, answers) {
     const tol = a.length < 5 ? 0 : a.length < 9 ? 1 : 2;
     return lev(g, a) <= tol
         || lev(g.replace(/ /g, ""), a.replace(/ /g, "")) <= tol
-        || (" " + g + " ").includes(" " + a + " ");   // "un oso panda gigante" contiene "oso panda"
+        || (" " + g + " ").includes(" " + a + " ");   // "a giant panda bear" contains "giant panda"
   });
 }
 
-// --- Carga de imagen desde Wikipedia ---------------------------------------
+// --- Image loading from Wikipedia -----------------------------------------
 async function fetchImage(item) {
   const res = await fetch(API + encodeURIComponent(item.title));
   if (!res.ok) throw new Error("HTTP " + res.status);
   const data = await res.json();
   const page = Object.values(data.query.pages)[0];
   const src = page && page.thumbnail && page.thumbnail.source;
-  if (!src || /\.svg/i.test(src)) return null;           // sin foto, o es un diagrama/logo
+  if (!src || /\.svg/i.test(src)) return null;           // no photo, or a diagram/logo
   await new Promise((ok, fail) => {
     const probe = new Image();
     probe.onload = ok; probe.onerror = fail; probe.src = src;
@@ -227,9 +216,9 @@ async function newRound() {
   over = true;
   $("result").hidden = true;
   $("status").hidden = false;
-  $("status").textContent = "Cargando imagen…";
+  $("status").textContent = "Loading image…";
   $("guesses").innerHTML = "";
-  $("category").innerHTML = "Pista: <b>…</b>";
+  $("category").innerHTML = "Hint: <b>…</b>";
   setInputs(false);
 
   let networkErrors = 0;
@@ -243,7 +232,7 @@ async function newRound() {
       if (++networkErrors >= 3) break;
     }
   }
-  $("status").innerHTML = "No se pudo cargar una imagen de Wikipedia.<br>Revisa tu conexión y pulsa «Siguiente».";
+  $("status").innerHTML = "Could not load an image from Wikipedia.<br>Check your connection and press “Next image”.";
   $("result").hidden = false;
   $("verdict").textContent = ""; $("answer").textContent = ""; $("source").hidden = true;
 }
@@ -252,13 +241,13 @@ function startRound(item, image) {
   round = { ...item, ...image };
   attempt = 0; over = false;
   const img = $("img");
-  img.style.transition = "none";               // sin animación: que no se vea la imagen entera al cargar
+  img.style.transition = "none";               // no animation, so the full image never flashes on load
   img.style.transform = `scale(${ZOOMS[0]})`;
   img.src = image.src;
   $("frame").style.aspectRatio = Math.min(1.6, Math.max(0.8, image.ratio));
   void img.offsetWidth;
   img.style.transition = "";
-  $("category").innerHTML = "Pista: <b></b>";
+  $("category").innerHTML = "Hint: <b></b>";
   $("category").querySelector("b").textContent = item.category;
   $("status").hidden = true;
   setInputs(true);
@@ -298,12 +287,12 @@ function finish(won) {
   $("img").style.transform = "scale(1)";
   renderDots(won);
   setInputs(false);
-  $("score").textContent = `Aciertos: ${wins} / ${played}`;
-  $("verdict").textContent = won ? `¡Correcto! Al intento ${attempt + 1} de ${MAX}` : "Se acabaron los intentos. Era:";
+  $("score").textContent = `Score: ${wins} / ${played}`;
+  $("verdict").textContent = won ? `Correct! On attempt ${attempt + 1} of ${MAX}` : "Out of attempts. It was:";
   $("verdict").className = won ? "ok" : "bad";
   $("answer").textContent = round.answers[0].replace(/^./, c => c.toUpperCase());
   $("source").hidden = false;
-  $("source").href = "https://es.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
+  $("source").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
   $("result").hidden = false;
   $("next").focus();
 }
