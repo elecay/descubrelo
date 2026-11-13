@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descubrelo</title>
+<style>
+  :root { --bg:#14161c; --card:#1e222b; --line:#323846; --text:#eef0f4; --muted:#98a0b0; --accent:#ffb84d; --ok:#5fd08a; --bad:#f0706a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:560px; margin:0 auto; padding:20px 16px 40px; }
+  header { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; }
+  h1 { font-size:1.4rem; margin:0; letter-spacing:.02em; }
+  #score { color:var(--muted); font-size:.9rem; }
+  #hint { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  #category { background:var(--card); border:1px solid var(--line); border-radius:999px; padding:4px 14px; font-size:.9rem; }
+  #category b { color:var(--accent); }
+  #dots { display:flex; gap:6px; }
+  #dots i { width:12px; height:12px; border-radius:50%; background:var(--line); }
+  #dots i.used { background:var(--bad); }
+  #dots i.now { background:var(--accent); }
+  #dots i.win { background:var(--ok); }
+  #frame { position:relative; width:100%; aspect-ratio:4/3; overflow:hidden; border-radius:14px; background:#000; border:1px solid var(--line); }
+  #img { width:100%; height:100%; object-fit:contain; display:block; transform:scale(1); transition:transform .7s ease; user-select:none; -webkit-user-drag:none; pointer-events:none; }
+  #status { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); background:#000; text-align:center; padding:20px; }
+  #status[hidden] { display:none; }
+  form { display:flex; gap:8px; margin-top:14px; }
+  input { flex:1; min-width:0; padding:12px 14px; font:inherit; color:var(--text); background:var(--card); border:1px solid var(--line); border-radius:10px; outline:none; }
+  input:focus { border-color:var(--accent); }
+  button { padding:12px 16px; font:inherit; font-weight:600; border:0; border-radius:10px; cursor:pointer; background:var(--accent); color:#222; }
+  button.ghost { background:var(--card); color:var(--text); border:1px solid var(--line); font-weight:400; }
+  button:disabled, input:disabled { opacity:.5; cursor:default; }
+  #guesses { list-style:none; padding:0; margin:12px 0 0; display:flex; flex-wrap:wrap; gap:6px; }
+  #guesses li { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:3px 10px; font-size:.9rem; color:var(--muted); text-decoration:line-through; }
+  #result { margin-top:16px; padding:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; text-align:center; }
+  #result[hidden] { display:none; }
+  #result h2 { margin:0 0 4px; font-size:1.15rem; }
+  #result h2.ok { color:var(--ok); } #result h2.bad { color:var(--bad); }
+  #answer { font-size:1.5rem; font-weight:700; margin:4px 0 10px; }
+  #result a { color:var(--muted); font-size:.85rem; display:block; margin-bottom:14px; }
+  footer { margin-top:32px; text-align:center; color:var(--muted); font-size:.85rem; }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🔍 Descubrelo</h1>
+    <span id="score">Score: 0 / 0</span>
+  </header>
+
+  <div id="hint">
+    <span id="category">Hint: <b>…</b></span>
+    <span id="dots" aria-label="Attempts"></span>
+  </div>
+
+  <div id="frame">
+    <img id="img" alt="Mystery image">
+    <div id="status">Loading image…</div>
+  </div>
+
+  <form id="form" autocomplete="off">
+    <input id="guess" placeholder="What is it?" aria-label="Your guess" autocapitalize="off" spellcheck="false">
+    <button id="send">Guess</button>
+    <button id="pass" type="button" class="ghost" title="Use up an attempt to zoom out">Pass</button>
+  </form>
+  <ul id="guesses"></ul>
+
+  <div id="result" hidden>
+    <h2 id="verdict"></h2>
+    <div id="answer"></div>
+    <a id="source" target="_blank" rel="noopener">View on Wikipedia</a>
+    <button id="next">Next image →</button>
+  </div>
+
+  <footer>Built with ❤️ by <s>Claude</s> <a href="https://github.com/elecay" target="_blank" rel="noopener">elecay</a></footer>
+</main>
+
+<script>
+// Each entry: "Wikipedia title" or "Wikipedia title:answer,alias,alias".
+// The first answer is the one shown at the end. Images are fetched from Wikipedia on every round.
+const ITEMS = {
+  "Animal": [
+    "Giraffe", "Lion", "Tiger", "Elephant", "Giant panda:panda,giant panda,panda bear", "Penguin", "Zebra", "Koala",
+    "Dolphin", "Polar bear:polar bear,bear", "Flamingo", "Kangaroo", "Hippopotamus:hippopotamus,hippo",
+    "Camel:camel,dromedary", "Peafowl:peacock,peafowl", "Crocodile:crocodile,alligator,croc", "Gorilla", "Wolf",
+    "Red fox:fox,red fox", "Octopus", "Turtle:turtle,tortoise", "Owl", "Butterfly:butterfly,moth",
+    "Honey bee:bee,honey bee,honeybee", "Chameleon", "Rhinoceros:rhinoceros,rhino", "Red squirrel:squirrel,red squirrel",
+    "Hedgehog", "Scarlet macaw:parrot,macaw,scarlet macaw", "Cheetah", "Toucan", "Jellyfish", "Shark", "Llama:llama,alpaca",
+    "Sloth", "Seahorse:seahorse,sea horse", "Lobster", "Common ostrich:ostrich", "Raccoon:raccoon,racoon", "Meerkat"
+  ],
+  "Building or monument": [
+    "Eiffel Tower", "Colosseum:colosseum,coliseum,roman colosseum", "Taj Mahal", "Statue of Liberty",
+    "Sagrada Família", "Big Ben:big ben,elizabeth tower", "Leaning Tower of Pisa:leaning tower of pisa,tower of pisa,pisa",
+    "Sydney Opera House:sydney opera house,sydney opera,opera house", "Machu Picchu", "Parthenon:parthenon,acropolis",
+    "Great Wall of China:great wall of china,great wall,wall of china",
+    "Christ the Redeemer (statue):christ the redeemer,cristo redentor,corcovado", "Burj Khalifa",
+    "Empire State Building:empire state building,empire state", "Golden Gate Bridge:golden gate bridge,golden gate",
+    "Alhambra", "Petra", "Stonehenge", "Chichen Itza", "Angkor Wat",
+    "Saint Basil's Cathedral:saint basil's cathedral,st basil's cathedral,saint basil,st basil",
+    "Neuschwanstein Castle:neuschwanstein castle,neuschwanstein", "Petronas Towers:petronas towers,petronas",
+    "Brandenburg Gate", "White House", "Moscow Kremlin:kremlin,moscow kremlin",
+    "Giza pyramid complex:pyramids of giza,pyramids,pyramid,giza pyramids,egyptian pyramids,great pyramid",
+    "Great Sphinx of Giza:sphinx,great sphinx,sphinx of giza", "Tower Bridge:tower bridge,london bridge", "Atomium",
+    "Guggenheim Museum Bilbao:guggenheim museum,guggenheim,guggenheim bilbao", "Moai:moai,easter island,easter island statues",
+    "Mount Rushmore:mount rushmore,rushmore,mt rushmore", "Arc de Triomphe:arc de triomphe,arch of triumph,triumphal arch",
+    "St. Peter's Basilica:st peter's basilica,saint peter's basilica,st peters,vatican", "Hagia Sophia",
+    "Palace of Versailles:palace of versailles,versailles", "London Eye:london eye,ferris wheel",
+    "Notre-Dame de Paris:notre dame,notre dame de paris,notre dame cathedral", "Space Needle", "CN Tower", "Brooklyn Bridge"
+  ],
+  "Landscape or natural phenomenon": [
+    "Grand Canyon", "Mount Everest:mount everest,everest,mt everest", "Iguazu Falls:iguazu falls,iguazu,iguassu falls,waterfall",
+    "Niagara Falls:niagara falls,niagara,waterfall", "Mount Fuji:mount fuji,fuji,mt fuji,fujiyama", "Matterhorn",
+    "Salar de Uyuni:salar de uyuni,uyuni,salt flat,salt flats", "Uluru:uluru,ayers rock", "Hạ Long Bay:ha long bay,halong bay,ha long",
+    "Perito Moreno Glacier:perito moreno glacier,perito moreno,glacier", "Mount Kilimanjaro:kilimanjaro,mount kilimanjaro",
+    "Angel Falls:angel falls,salto angel,waterfall", "Dead Sea", "Aurora:aurora,northern lights,aurora borealis,southern lights",
+    "Great Barrier Reef:great barrier reef,barrier reef,coral reef,reef", "Giant's Causeway:giant's causeway,giants causeway",
+    "Antelope Canyon", "Cappadocia", "Monument Valley", "Yosemite National Park:yosemite,yosemite national park",
+    "Volcano", "Glacier", "Iceberg", "Dune:dune,dunes,sand dune,desert", "Geyser", "Rainbow", "Waterfall", "Fjord:fjord,fiord",
+    "Tornado:tornado,twister", "Lightning:lightning,thunderstorm,thunder", "Cliffs of Moher:cliffs of moher,cliffs,cliff"
+  ],
+  "Food": [
+    "Pizza", "Paella", "Sushi", "Hamburger:hamburger,burger,cheeseburger", "Croissant", "Taco:taco,tacos",
+    "Spanish omelette:spanish omelette,tortilla,omelette,omelet,spanish tortilla", "Churro:churros,churro", "Ice cream:ice cream,gelato",
+    "Spaghetti:spaghetti,pasta", "Lasagna:lasagna,lasagne", "Ceviche", "Empanada", "Guacamole", "Waffle", "Pretzel",
+    "Doughnut:doughnut,donut", "Macaron:macaron,macaroon", "Ramen", "Hot dog:hot dog,hotdog", "Popcorn", "Cheese",
+    "Chocolate", "Bread", "Tiramisu", "Falafel", "Arepa", "Tamale:tamale,tamal", "Burrito", "Nachos", "Pancake:pancake,pancakes,crepe",
+    "Fried egg:fried egg,egg", "Croquette", "Gazpacho", "Fondue", "Kebab:kebab,kabob,doner", "Bagel",
+    "French fries:french fries,fries,chips", "Cupcake", "Dumpling:dumpling,dumplings"
+  ],
+  "Fruit or plant": [
+    "Pineapple", "Strawberry", "Watermelon", "Kiwifruit:kiwi,kiwifruit", "Pomegranate", "Common sunflower:sunflower", "Cactus",
+    "Avocado", "Banana", "Lemon", "Coconut:coconut,coconut palm,palm tree", "Tulip", "Lavandula:lavender",
+    "Pitaya:dragon fruit,pitaya,pitahaya", "Artichoke", "Maize:corn,maize,sweetcorn,corn on the cob", "Mango", "Grape:grapes,grape",
+    "Cherry:cherry,cherries", "Raspberry", "Fig", "Papaya", "Pumpkin:pumpkin,squash", "Broccoli",
+    "Amanita muscaria:mushroom,toadstool,fly agaric,amanita", "Bamboo", "Orchid", "Taraxacum:dandelion", "Bonsai", "Tomato",
+    "Garlic", "Peach", "Blueberry:blueberry,blueberries"
+  ],
+  "Object": [
+    "Umbrella:umbrella,parasol", "Bicycle:bicycle,bike", "Guitar", "Piano", "Violin", "Saxophone:saxophone,sax",
+    "Drum kit:drums,drum kit,drum set,drum", "Trumpet", "Accordion", "Harp", "Hourglass", "Compass", "Telescope", "Microscope",
+    "Hot air balloon:hot air balloon,balloon", "Rubik's Cube:rubik's cube,rubik,rubiks cube", "Typewriter",
+    "Chess:chess,chessboard,chess board", "Incandescent light bulb:light bulb,lightbulb,bulb,lamp", "Scissors", "Padlock:padlock,lock",
+    "Anchor", "Flashlight:flashlight,torch", "Camera", "Phonograph:gramophone,phonograph,record player", "Helicopter", "Submarine",
+    "Tram:tram,streetcar,trolley", "Steam locomotive:steam locomotive,locomotive,train,steam train", "Sailboat:sailboat,boat,sailing boat,yacht",
+    "Motorcycle:motorcycle,motorbike", "Skateboard", "Dice:dice,die", "Yo-yo:yo-yo,yoyo", "Kite", "Hand fan:fan,hand fan",
+    "Boomerang", "Matryoshka doll:matryoshka,russian doll,nesting doll,matryoshka doll,babushka", "Lighthouse", "Windmill",
+    "Teapot:teapot,kettle", "Corkscrew", "Globe"
+  ]
+};
+
+const ZOOMS = [10, 6, 3.5, 2, 1];   // one level per attempt; the fifth shows the full image
+const MAX = ZOOMS.length;
+const API = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
+            "&prop=pageimages&piprop=thumbnail&pithumbsize=960&titles=";
+
+const $ = id => document.getElementById(id);
+let deck = [], round = null, attempt = 0, over = false, wins = 0, played = 0;
+
+function buildDeck() {
+  const all = [];
+  for (const [category, list] of Object.entries(ITEMS)) {
+    for (const entry of list) {
+      const [title, rest] = entry.split(":");
+      all.push({ category, title, answers: (rest || title).split(",") });
+    }
+  }
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all;
+}
+
+// --- Forgiving comparison ---------------------------------------------------
+function norm(s) {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/['’]/g, "").replace(/[^a-z0-9]+/g, " ").trim()
+    .split(" ").filter(w => !["the", "a", "an"].includes(w)).join(" ");
+}
+function lev(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function isMatch(guess, answers) {
+  const g = norm(guess);
+  if (!g) return false;
+  return answers.some(raw => {
+    const a = norm(raw);
+    const tol = a.length < 5 ? 0 : a.length < 9 ? 1 : 2;
+    return lev(g, a) <= tol
+        || lev(g.replace(/ /g, ""), a.replace(/ /g, "")) <= tol
+        || (" " + g + " ").includes(" " + a + " ");   // "a giant panda bear" contains "giant panda"
+  });
+}
+
+// --- Image loading from Wikipedia -----------------------------------------
+async function fetchImage(item) {
+  const res = await fetch(API + encodeURIComponent(item.title));
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  const page = Object.values(data.query.pages)[0];
+  const src = page && page.thumbnail && page.thumbnail.source;
+  if (!src || /\.svg/i.test(src)) return null;           // no photo, or a diagram/logo
+  await new Promise((ok, fail) => {
+    const probe = new Image();
+    probe.onload = ok; probe.onerror = fail; probe.src = src;
+  });
+  return { src, ratio: page.thumbnail.width / page.thumbnail.height, pageTitle: page.title };
+}
+
+async function newRound() {
+  over = true;
+  $("result").hidden = true;
+  $("status").hidden = false;
+  $("status").textContent = "Loading image…";
+  $("guesses").innerHTML = "";
+  $("category").innerHTML = "Hint: <b>…</b>";
+  setInputs(false);
+
+  let networkErrors = 0;
+  for (let tries = 0; tries < 12; tries++) {
+    if (!deck.length) deck = buildDeck();
+    const item = deck.pop();
+    try {
+      const image = await fetchImage(item);
+      if (image) return startRound(item, image);
+    } catch (e) {
+      if (++networkErrors >= 3) break;
+    }
+  }
+  $("status").innerHTML = "Could not load an image from Wikipedia.<br>Check your connection and press “Next image”.";
+  $("result").hidden = false;
+  $("verdict").textContent = ""; $("answer").textContent = ""; $("source").hidden = true;
+}
+
+function startRound(item, image) {
+  round = { ...item, ...image };
+  attempt = 0; over = false;
+  const img = $("img");
+  img.style.transition = "none";               // no animation, so the full image never flashes on load
+  img.style.transform = `scale(${ZOOMS[0]})`;
+  img.src = image.src;
+  $("frame").style.aspectRatio = Math.min(1.6, Math.max(0.8, image.ratio));
+  void img.offsetWidth;
+  img.style.transition = "";
+  $("category").innerHTML = "Hint: <b></b>";
+  $("category").querySelector("b").textContent = item.category;
+  $("status").hidden = true;
+  setInputs(true);
+  renderDots();
+  $("guess").value = "";
+  $("guess").focus();
+}
+
+function setInputs(on) {
+  $("guess").disabled = $("send").disabled = $("pass").disabled = !on;
+}
+
+function renderDots(won) {
+  $("dots").innerHTML = ZOOMS.map((_, i) => {
+    const cls = won && i === attempt ? "win" : i < attempt ? "used" : (i === attempt && !over) ? "now" : "";
+    return `<i class="${cls}"></i>`;
+  }).join("");
+}
+
+function play(text) {
+  if (over) return;
+  if (text && isMatch(text, round.answers)) return finish(true);
+  const li = document.createElement("li");
+  li.textContent = text || "—";
+  $("guesses").appendChild(li);
+  attempt++;
+  if (attempt >= MAX) return finish(false);
+  $("img").style.transform = `scale(${ZOOMS[attempt]})`;
+  renderDots();
+  $("guess").value = "";
+  $("guess").focus();
+}
+
+function finish(won) {
+  over = true;
+  played++; if (won) wins++;
+  $("img").style.transform = "scale(1)";
+  renderDots(won);
+  setInputs(false);
+  $("score").textContent = `Score: ${wins} / ${played}`;
+  $("verdict").textContent = won ? `Correct! On attempt ${attempt + 1} of ${MAX}` : "Out of attempts. It was:";
+  $("verdict").className = won ? "ok" : "bad";
+  $("answer").textContent = round.answers[0].replace(/^./, c => c.toUpperCase());
+  $("source").hidden = false;
+  $("source").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
+  $("result").hidden = false;
+  $("next").focus();
+}
+
+$("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const text = $("guess").value.trim();
+  if (text) play(text);
+});
+$("pass").addEventListener("click", () => play(""));
+$("next").addEventListener("click", newRound);
+
+newRound();
+</script>
+</body>
+</html>
