@@ -78,99 +78,135 @@
 </main>
 
 <script>
-// Each entry: "Wikipedia title" or "Wikipedia title:answer,alias,alias".
-// The first answer is the one shown at the end. Images are fetched from Wikipedia on every round.
-const ITEMS = {
-  "Animal": [
-    "Giraffe", "Lion", "Tiger", "Elephant", "Giant panda:panda,giant panda,panda bear", "Penguin", "Zebra", "Koala",
-    "Dolphin", "Polar bear:polar bear,bear", "Flamingo", "Kangaroo", "Hippopotamus:hippopotamus,hippo",
-    "Camel:camel,dromedary", "Peafowl:peacock,peafowl", "Crocodile:crocodile,alligator,croc", "Gorilla", "Wolf",
-    "Red fox:fox,red fox", "Octopus", "Turtle:turtle,tortoise", "Owl", "Butterfly:butterfly,moth",
-    "Honey bee:bee,honey bee,honeybee", "Chameleon", "Rhinoceros:rhinoceros,rhino", "Red squirrel:squirrel,red squirrel",
-    "Hedgehog", "Scarlet macaw:parrot,macaw,scarlet macaw", "Cheetah", "Toucan", "Jellyfish", "Shark", "Llama:llama,alpaca",
-    "Sloth", "Seahorse:seahorse,sea horse", "Lobster", "Common ostrich:ostrich", "Raccoon:raccoon,racoon", "Meerkat"
-  ],
-  "Building or monument": [
-    "Eiffel Tower", "Colosseum:colosseum,coliseum,roman colosseum", "Taj Mahal", "Statue of Liberty",
-    "Sagrada Família", "Big Ben:big ben,elizabeth tower", "Leaning Tower of Pisa:leaning tower of pisa,tower of pisa,pisa",
-    "Sydney Opera House:sydney opera house,sydney opera,opera house", "Machu Picchu", "Parthenon:parthenon,acropolis",
-    "Great Wall of China:great wall of china,great wall,wall of china",
-    "Christ the Redeemer (statue):christ the redeemer,cristo redentor,corcovado", "Burj Khalifa",
-    "Empire State Building:empire state building,empire state", "Golden Gate Bridge:golden gate bridge,golden gate",
-    "Alhambra", "Petra", "Stonehenge", "Chichen Itza", "Angkor Wat",
-    "Saint Basil's Cathedral:saint basil's cathedral,st basil's cathedral,saint basil,st basil",
-    "Neuschwanstein Castle:neuschwanstein castle,neuschwanstein", "Petronas Towers:petronas towers,petronas",
-    "Brandenburg Gate", "White House", "Moscow Kremlin:kremlin,moscow kremlin",
-    "Giza pyramid complex:pyramids of giza,pyramids,pyramid,giza pyramids,egyptian pyramids,great pyramid",
-    "Great Sphinx of Giza:sphinx,great sphinx,sphinx of giza", "Tower Bridge:tower bridge,london bridge", "Atomium",
-    "Guggenheim Museum Bilbao:guggenheim museum,guggenheim,guggenheim bilbao", "Moai:moai,easter island,easter island statues",
-    "Mount Rushmore:mount rushmore,rushmore,mt rushmore", "Arc de Triomphe:arc de triomphe,arch of triumph,triumphal arch",
-    "St. Peter's Basilica:st peter's basilica,saint peter's basilica,st peters,vatican", "Hagia Sophia",
-    "Palace of Versailles:palace of versailles,versailles", "London Eye:london eye,ferris wheel",
-    "Notre-Dame de Paris:notre dame,notre dame de paris,notre dame cathedral", "Space Needle", "CN Tower", "Brooklyn Bridge"
-  ],
-  "Landscape or natural phenomenon": [
-    "Grand Canyon", "Mount Everest:mount everest,everest,mt everest", "Iguazu Falls:iguazu falls,iguazu,iguassu falls,waterfall",
-    "Niagara Falls:niagara falls,niagara,waterfall", "Mount Fuji:mount fuji,fuji,mt fuji,fujiyama", "Matterhorn",
-    "Salar de Uyuni:salar de uyuni,uyuni,salt flat,salt flats", "Uluru:uluru,ayers rock", "Hạ Long Bay:ha long bay,halong bay,ha long",
-    "Perito Moreno Glacier:perito moreno glacier,perito moreno,glacier", "Mount Kilimanjaro:kilimanjaro,mount kilimanjaro",
-    "Angel Falls:angel falls,salto angel,waterfall", "Dead Sea", "Aurora:aurora,northern lights,aurora borealis,southern lights",
-    "Great Barrier Reef:great barrier reef,barrier reef,coral reef,reef", "Giant's Causeway:giant's causeway,giants causeway",
-    "Antelope Canyon", "Cappadocia", "Monument Valley", "Yosemite National Park:yosemite,yosemite national park",
-    "Volcano", "Glacier", "Iceberg", "Dune:dune,dunes,sand dune,desert", "Geyser", "Rainbow", "Waterfall", "Fjord:fjord,fiord",
-    "Tornado:tornado,twister", "Lightning:lightning,thunderstorm,thunder", "Cliffs of Moher:cliffs of moher,cliffs,cliff"
-  ],
-  "Food": [
-    "Pizza", "Paella", "Sushi", "Hamburger:hamburger,burger,cheeseburger", "Croissant", "Taco:taco,tacos",
-    "Spanish omelette:spanish omelette,tortilla,omelette,omelet,spanish tortilla", "Churro:churros,churro", "Ice cream:ice cream,gelato",
-    "Spaghetti:spaghetti,pasta", "Lasagna:lasagna,lasagne", "Ceviche", "Empanada", "Guacamole", "Waffle", "Pretzel",
-    "Doughnut:doughnut,donut", "Macaron:macaron,macaroon", "Ramen", "Hot dog:hot dog,hotdog", "Popcorn", "Cheese",
-    "Chocolate", "Bread", "Tiramisu", "Falafel", "Arepa", "Tamale:tamale,tamal", "Burrito", "Nachos", "Pancake:pancake,pancakes,crepe",
-    "Fried egg:fried egg,egg", "Croquette", "Gazpacho", "Fondue", "Kebab:kebab,kabob,doner", "Bagel",
-    "French fries:french fries,fries,chips", "Cupcake", "Dumpling:dumpling,dumplings"
-  ],
-  "Fruit or plant": [
-    "Pineapple", "Strawberry", "Watermelon", "Kiwifruit:kiwi,kiwifruit", "Pomegranate", "Common sunflower:sunflower", "Cactus",
-    "Avocado", "Banana", "Lemon", "Coconut:coconut,coconut palm,palm tree", "Tulip", "Lavandula:lavender",
-    "Pitaya:dragon fruit,pitaya,pitahaya", "Artichoke", "Maize:corn,maize,sweetcorn,corn on the cob", "Mango", "Grape:grapes,grape",
-    "Cherry:cherry,cherries", "Raspberry", "Fig", "Papaya", "Pumpkin:pumpkin,squash", "Broccoli",
-    "Amanita muscaria:mushroom,toadstool,fly agaric,amanita", "Bamboo", "Orchid", "Taraxacum:dandelion", "Bonsai", "Tomato",
-    "Garlic", "Peach", "Blueberry:blueberry,blueberries"
-  ],
-  "Object": [
-    "Umbrella:umbrella,parasol", "Bicycle:bicycle,bike", "Guitar", "Piano", "Violin", "Saxophone:saxophone,sax",
-    "Drum kit:drums,drum kit,drum set,drum", "Trumpet", "Accordion", "Harp", "Hourglass", "Compass", "Telescope", "Microscope",
-    "Hot air balloon:hot air balloon,balloon", "Rubik's Cube:rubik's cube,rubik,rubiks cube", "Typewriter",
-    "Chess:chess,chessboard,chess board", "Incandescent light bulb:light bulb,lightbulb,bulb,lamp", "Scissors", "Padlock:padlock,lock",
-    "Anchor", "Flashlight:flashlight,torch", "Camera", "Phonograph:gramophone,phonograph,record player", "Helicopter", "Submarine",
-    "Tram:tram,streetcar,trolley", "Steam locomotive:steam locomotive,locomotive,train,steam train", "Sailboat:sailboat,boat,sailing boat,yacht",
-    "Motorcycle:motorcycle,motorbike", "Skateboard", "Dice:dice,die", "Yo-yo:yo-yo,yoyo", "Kite", "Hand fan:fan,hand fan",
-    "Boomerang", "Matryoshka doll:matryoshka,russian doll,nesting doll,matryoshka doll,babushka", "Lighthouse", "Windmill",
-    "Teapot:teapot,kettle", "Corkscrew", "Globe"
-  ]
+// Each theme lists seed Wikipedia categories. Members (and, if a seed is too
+// thin, a sample of its subcategories' members) are fetched live and cached
+// for the session, so no per-article list is kept here.
+const CATEGORIES = {
+  "Animal": ["Penguins", "Big cats", "Flightless birds", "Birds of prey", "Hummingbirds", "Parrots", "Owls", "Sharks", "Butterflies", "Elephants"],
+  "Building or monument": ["Castles", "Palaces", "Pyramids", "Mosques", "Cathedrals", "Triumphal arches", "Monasteries", "Opera houses"],
+  "Landscape or natural phenomenon": ["Active volcanoes", "Waterfalls", "Deserts", "Glaciers", "Caves", "Fjords", "Geysers", "Salt flats", "Coral reefs", "Lakes", "Rock formations"],
+  "Food": ["Street food", "Desserts", "Pasta", "Sandwiches", "Soups", "Breads", "Noodles", "Pizza", "Pastries", "Rice dishes", "Dumplings"],
+  "Fruit or plant": ["Garden plants", "Citrus", "Melons", "Berries"],
+  "Object": ["Hand tools", "Bicycles", "String instruments", "Keyboard instruments", "Hats", "Furniture", "Boats"]
 };
+
+// Concrete off-topic titles observed while surveying the categories above
+// (e.g. a chess piece under Castles, a car rally under Deserts) — excluded
+// by exact match rather than guessing at a general pattern.
+const BAD_TITLES = new Set([
+  "howdah pistol", "elephant joke", "elephants' graveyard", "project elephant",
+  "rook (chess)", "beer can pyramid", "human pyramid", "square pyramidal number",
+  "jean-pierre houdin", "the critical eye", "dakar rally", "coral reefs",
+  "world pizza championship", "history of pizza", "pizza delivery", "pizza cutter",
+  "soup kitchen", "alphitomancy"
+]);
 
 const ZOOMS = [10, 6, 3.5, 2, 1];   // one level per attempt; the fifth shows the full image
 const MAX = ZOOMS.length;
 const API = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
-            "&prop=pageimages&piprop=thumbnail&pithumbsize=960&titles=";
+            "&prop=pageimages|redirects&piprop=thumbnail&pithumbsize=960&rdlimit=20&titles=";
 
 const $ = id => document.getElementById(id);
-let deck = [], round = null, attempt = 0, over = false, wins = 0, played = 0;
+let round = null, attempt = 0, over = false, wins = 0, played = 0;
+const used = new Set();        // page titles already shown this session
+const poolCache = {};          // seed category name -> array of candidate titles
 
-function buildDeck() {
-  const all = [];
-  for (const [category, list] of Object.entries(ITEMS)) {
-    for (const entry of list) {
-      const [title, rest] = entry.split(":");
-      all.push({ category, title, answers: (rest || title).split(",") });
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Skip meta/list articles that slip into category membership.
+function isUsablePageTitle(title) {
+  return !/^(List of|Lists of|Index of|Outline of|Timeline of|Glossary of|Comparison of)\b/i.test(title)
+      && !/\(disambiguation\)$/i.test(title)
+      && !BAD_TITLES.has(title.toLowerCase());
+}
+
+// Only keep short, plain-text redirects as guessable aliases.
+function isUsableAlias(title) {
+  return /^[A-Za-z][A-Za-z' .-]*$/.test(title) && title.trim().split(/\s+/).length <= 4;
+}
+
+// --- Popularity check (Wikipedia Pageviews API) -----------------------------
+// Category members are a mix of famous and obscure articles (e.g. "Waterfalls"
+// includes both Niagara Falls and some stream two towns over). Rather than
+// pre-checking a whole pool (one request per member — easily a flood of
+// requests and a good way to get rate-limited), we check only the single
+// candidate a round actually wants, and reject-and-retry if it's obscure.
+const MIN_MONTHLY_VIEWS = 3000;
+
+function lastFullMonthRange() {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const fmt = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}0100`;
+  return { start: fmt(start), end: fmt(end) };
+}
+
+async function monthlyViews(title) {
+  const { start, end } = lastFullMonthRange();
+  const url = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/" +
+              encodeURIComponent(title.replace(/ /g, "_")) + "/monthly/" + start + "/" + end;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return 0;
+    const data = await res.json();
+    return (data.items || []).reduce((sum, i) => sum + i.views, 0);
+  } catch {
+    return 0;
+  }
+}
+
+// --- Category membership (fetched live, cached per seed) -------------------
+async function categoryMembers(categoryName, type) {
+  const ns = type === "page" ? "&gcmnamespace=0" : "";
+  const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*" +
+              "&generator=categorymembers&gcmtype=" + type + ns + "&gcmlimit=500" +
+              "&gcmtitle=" + encodeURIComponent("Category:" + categoryName);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const data = await res.json();
+  const pages = data.query && data.query.pages;
+  return pages ? Object.values(pages).map(p => p.title) : [];
+}
+
+// Top-level categories are often mostly subcategories (e.g. Category:Mammals
+// holds almost no articles directly), so when a seed is thin we sample a few
+// of its subcategories' members too.
+async function getCategoryPool(categoryName) {
+  if (poolCache[categoryName]) return poolCache[categoryName];
+  let pool = (await categoryMembers(categoryName, "page")).filter(isUsablePageTitle);
+  if (pool.length < 20) {
+    const subcats = shuffleArray(await categoryMembers(categoryName, "subcat"));
+    for (const subcat of subcats.slice(0, 6)) {
+      const members = await categoryMembers(subcat.replace(/^Category:/, ""), "page");
+      pool = pool.concat(members.filter(isUsablePageTitle));
+      if (pool.length >= 40) break;
     }
   }
-  for (let i = all.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [all[i], all[j]] = [all[j], all[i]];
+  poolCache[categoryName] = pool;
+  return pool;
+}
+
+async function pickCandidate(requirePopular) {
+  const themes = Object.keys(CATEGORIES);
+  const theme = themes[Math.floor(Math.random() * themes.length)];
+  const cats = CATEGORIES[theme];
+  const categoryName = cats[Math.floor(Math.random() * cats.length)];
+  const pool = await getCategoryPool(categoryName);
+  if (!pool.length) return null;
+  const fresh = pool.filter(t => !used.has(t));
+  const options = fresh.length ? fresh : pool;   // allow repeats once a pool is exhausted
+  const title = options[Math.floor(Math.random() * options.length)];
+  if (requirePopular && await monthlyViews(title) < MIN_MONTHLY_VIEWS) {
+    used.add(title);   // too obscure — don't offer it again this session
+    return null;
   }
-  return all;
+  return { category: theme, title };
 }
 
 // --- Forgiving comparison ---------------------------------------------------
@@ -190,15 +226,25 @@ function lev(a, b) {
   }
   return prev[b.length];
 }
+// Per-word typo tolerance, scaled to word length (so a one-letter slip on a
+// long word still passes, but short words still need to be close).
+function wordTol(w) {
+  return w.length < 5 ? 0 : w.length < 8 ? 1 : 2;
+}
 function isMatch(guess, answers) {
   const g = norm(guess);
   if (!g) return false;
+  const gWords = g.split(" ").filter(w => w.length >= 3);
   return answers.some(raw => {
     const a = norm(raw);
     const tol = a.length < 5 ? 0 : a.length < 9 ? 1 : 2;
-    return lev(g, a) <= tol
-        || lev(g.replace(/ /g, ""), a.replace(/ /g, "")) <= tol
-        || (" " + g + " ").includes(" " + a + " ");   // "a giant panda bear" contains "giant panda"
+    if (lev(g, a) <= tol) return true;
+    if (lev(g.replace(/ /g, ""), a.replace(/ /g, "")) <= tol) return true;
+    if ((" " + g + " ").includes(" " + a + " ")) return true;   // "a giant panda bear" contains "giant panda"
+    // One matching word is enough — typos/grammar on the rest don't count
+    // against the guess (e.g. "pandas" or "a panda" for "Giant panda").
+    const aWords = a.split(" ").filter(w => w.length >= 3);
+    return gWords.some(gw => aWords.some(aw => lev(gw, aw) <= wordTol(aw)));
   });
 }
 
@@ -214,7 +260,9 @@ async function fetchImage(item) {
     const probe = new Image();
     probe.onload = ok; probe.onerror = fail; probe.src = src;
   });
-  return { src, ratio: page.thumbnail.width / page.thumbnail.height, pageTitle: page.title };
+  const redirects = (page.redirects || []).map(r => r.title).filter(isUsableAlias);
+  const answers = [page.title, ...redirects];
+  return { src, ratio: page.thumbnail.width / page.thumbnail.height, pageTitle: page.title, answers };
 }
 
 async function newRound() {
@@ -227,12 +275,17 @@ async function newRound() {
   setInputs(false);
 
   let networkErrors = 0;
-  for (let tries = 0; tries < 12; tries++) {
-    if (!deck.length) deck = buildDeck();
-    const item = deck.pop();
+  for (let tries = 0; tries < 20; tries++) {
     try {
-      const image = await fetchImage(item);
-      if (image) return startRound(item, image);
+      // Give up on the popularity requirement for the last few tries, so a
+      // thin category (e.g. "Hats") can never make the round fail outright.
+      const candidate = await pickCandidate(tries < 15);
+      if (!candidate) continue;
+      const image = await fetchImage(candidate);
+      if (image) {
+        used.add(image.pageTitle);
+        return startRound(candidate, image);
+      }
     } catch (e) {
       if (++networkErrors >= 3) break;
     }
