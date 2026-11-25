@@ -37,7 +37,6 @@
   #result h2 { margin:0 0 4px; font-size:1.15rem; }
   #result h2.ok { color:var(--ok); } #result h2.bad { color:var(--bad); }
   #answer { font-size:1.5rem; font-weight:700; margin:4px 0 10px; }
-  #result a { color:var(--muted); font-size:.85rem; display:block; margin-bottom:14px; }
   #final { margin-top:16px; padding:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; text-align:center; }
   #final[hidden] { display:none; }
   #final h2 { margin:0 0 4px; font-size:1.15rem; }
@@ -49,6 +48,8 @@
   #finalList li.bad .tag { background:var(--bad); color:#14161c; }
   #finalList .label { flex:1; color:var(--muted); }
   #finalList .label b { color:var(--text); font-weight:600; }
+  #finalList a { flex:none; color:var(--accent); font-size:.8rem; text-decoration:none; }
+  #finalList a:hover { text-decoration:underline; }
   footer { margin-top:32px; text-align:center; color:var(--muted); font-size:.85rem; }
   footer a { color:var(--accent); text-decoration:none; }
   footer a:hover { text-decoration:underline; }
@@ -81,7 +82,6 @@
   <div id="result" hidden>
     <h2 id="verdict"></h2>
     <div id="answer"></div>
-    <a id="source" target="_blank" rel="noopener">View on Wikipedia</a>
     <button id="next">Next image →</button>
   </div>
 
@@ -314,7 +314,7 @@ async function newRound() {
   }
   $("status").innerHTML = "Could not load an image from Wikipedia.<br>Check your connection and press “Next image”.";
   $("result").hidden = false;
-  $("verdict").textContent = ""; $("answer").textContent = ""; $("source").hidden = true;
+  $("verdict").textContent = ""; $("answer").textContent = "";
 }
 
 function startRound(item, image) {
@@ -365,15 +365,14 @@ function play(text) {
 function finish(won) {
   over = true;
   const answer = round.answers[0].replace(/^./, c => c.toUpperCase());
-  results.push({ category: round.category, answer, won });
+  const url = "https://en.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
+  results.push({ category: round.category, answer, won, url });
   $("img").style.transform = "scale(1)";
   renderDots(won);
   setInputs(false);
   $("verdict").textContent = won ? `Correct! On attempt ${attempt + 1} of ${MAX}` : "Out of attempts. It was:";
   $("verdict").className = won ? "ok" : "bad";
   $("answer").textContent = answer;
-  $("source").hidden = false;
-  $("source").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
   $("next").textContent = gameRound < GAME_LENGTH ? "Next image →" : "See results →";
   $("result").hidden = false;
   $("next").focus();
@@ -394,7 +393,10 @@ function showResults() {
     const label = document.createElement("span");
     label.className = "label";
     label.append(`${r.category} — `, Object.assign(document.createElement("b"), { textContent: r.answer }));
-    li.append(tag, label);
+    const link = document.createElement("a");
+    link.href = r.url; link.target = "_blank"; link.rel = "noopener";
+    link.textContent = "Wikipedia";
+    li.append(tag, label, link);
     list.appendChild(li);
   }
   $("final").hidden = false;
