@@ -38,6 +38,17 @@
   #result h2.ok { color:var(--ok); } #result h2.bad { color:var(--bad); }
   #answer { font-size:1.5rem; font-weight:700; margin:4px 0 10px; }
   #result a { color:var(--muted); font-size:.85rem; display:block; margin-bottom:14px; }
+  #final { margin-top:16px; padding:16px; background:var(--card); border:1px solid var(--line); border-radius:14px; text-align:center; }
+  #final[hidden] { display:none; }
+  #final h2 { margin:0 0 4px; font-size:1.15rem; }
+  #finalScore { font-size:1.5rem; font-weight:700; margin:4px 0 14px; }
+  #finalList { list-style:none; padding:0; margin:0 0 16px; text-align:left; display:flex; flex-direction:column; gap:6px; }
+  #finalList li { display:flex; justify-content:space-between; gap:10px; padding:8px 12px; background:var(--bg); border:1px solid var(--line); border-radius:8px; font-size:.9rem; }
+  #finalList .tag { flex:none; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; }
+  #finalList li.ok .tag { background:var(--ok); color:#14161c; }
+  #finalList li.bad .tag { background:var(--bad); color:#14161c; }
+  #finalList .label { flex:1; color:var(--muted); }
+  #finalList .label b { color:var(--text); font-weight:600; }
   footer { margin-top:32px; text-align:center; color:var(--muted); font-size:.85rem; }
   footer a { color:var(--accent); text-decoration:none; }
   footer a:hover { text-decoration:underline; }
@@ -47,7 +58,7 @@
 <main>
   <header>
     <h1>🔍 Descubrelo</h1>
-    <span id="score">Score: 0 / 0</span>
+    <span id="score">Image 1 / 5</span>
   </header>
 
   <div id="hint">
@@ -72,6 +83,13 @@
     <div id="answer"></div>
     <a id="source" target="_blank" rel="noopener">View on Wikipedia</a>
     <button id="next">Next image →</button>
+  </div>
+
+  <div id="final" hidden>
+    <h2>Game over</h2>
+    <div id="finalScore"></div>
+    <ol id="finalList"></ol>
+    <button id="playAgain">Play again</button>
   </div>
 
   <footer>Built with ❤️ by <s>Claude</s> <a href="https://github.com/elecay" target="_blank" rel="noopener">elecay</a></footer>
@@ -103,11 +121,14 @@ const BAD_TITLES = new Set([
 
 const ZOOMS = [10, 6, 3.5, 2, 1];   // one level per attempt; the fifth shows the full image
 const MAX = ZOOMS.length;
+const GAME_LENGTH = 5;               // images per game; results are shown after the last one
 const API = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1" +
             "&prop=pageimages|redirects&piprop=thumbnail&pithumbsize=960&rdlimit=20&titles=";
 
 const $ = id => document.getElementById(id);
-let round = null, attempt = 0, over = false, wins = 0, played = 0;
+let round = null, attempt = 0, over = false;
+let gameRound = 0;             // 1-indexed position of the current image within the game
+const results = [];            // {category, answer, won, attempts} per image this game
 const used = new Set();        // page titles already shown this session
 const poolCache = {};          // seed category name -> array of candidate titles
 
@@ -267,6 +288,7 @@ async function fetchImage(item) {
 
 async function newRound() {
   over = true;
+  gameRound++;
   $("result").hidden = true;
   $("status").hidden = false;
   $("status").textContent = "Loading image…";
@@ -307,6 +329,7 @@ function startRound(item, image) {
   img.style.transition = "";
   $("category").innerHTML = "Hint: <b></b>";
   $("category").querySelector("b").textContent = item.category;
+  $("score").textContent = `Image ${gameRound} / ${GAME_LENGTH}`;
   $("status").hidden = true;
   setInputs(true);
   renderDots();
@@ -341,18 +364,48 @@ function play(text) {
 
 function finish(won) {
   over = true;
-  played++; if (won) wins++;
+  const answer = round.answers[0].replace(/^./, c => c.toUpperCase());
+  results.push({ category: round.category, answer, won });
   $("img").style.transform = "scale(1)";
   renderDots(won);
   setInputs(false);
-  $("score").textContent = `Score: ${wins} / ${played}`;
   $("verdict").textContent = won ? `Correct! On attempt ${attempt + 1} of ${MAX}` : "Out of attempts. It was:";
   $("verdict").className = won ? "ok" : "bad";
-  $("answer").textContent = round.answers[0].replace(/^./, c => c.toUpperCase());
+  $("answer").textContent = answer;
   $("source").hidden = false;
   $("source").href = "https://en.wikipedia.org/wiki/" + encodeURIComponent(round.pageTitle.replace(/ /g, "_"));
+  $("next").textContent = gameRound < GAME_LENGTH ? "Next image →" : "See results →";
   $("result").hidden = false;
   $("next").focus();
+}
+
+function showResults() {
+  $("result").hidden = true;
+  const wins = results.filter(r => r.won).length;
+  $("finalScore").textContent = `${wins} / ${results.length} correct`;
+  const list = $("finalList");
+  list.innerHTML = "";
+  for (const r of results) {
+    const li = document.createElement("li");
+    li.className = r.won ? "ok" : "bad";
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = r.won ? "✓" : "✗";
+    const label = document.createElement("span");
+    label.className = "label";
+    label.append(`${r.category} — `, Object.assign(document.createElement("b"), { textContent: r.answer }));
+    li.append(tag, label);
+    list.appendChild(li);
+  }
+  $("final").hidden = false;
+  $("playAgain").focus();
+}
+
+function startGame() {
+  results.length = 0;
+  gameRound = 0;
+  $("final").hidden = true;
+  newRound();
 }
 
 $("form").addEventListener("submit", e => {
@@ -361,9 +414,10 @@ $("form").addEventListener("submit", e => {
   if (text) play(text);
 });
 $("pass").addEventListener("click", () => play(""));
-$("next").addEventListener("click", newRound);
+$("next").addEventListener("click", () => gameRound < GAME_LENGTH ? newRound() : showResults());
+$("playAgain").addEventListener("click", startGame);
 
-newRound();
+startGame();
 </script>
 </body>
 </html>
